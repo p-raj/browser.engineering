@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import re
 import stat
 import pytest
 import socket
@@ -50,6 +51,13 @@ class URL:
             "User-Agent": "Python HTTP Client",
         }
 
+    def _get_encoding(self, headers: dict):
+        if "Content-Type".casefold() in headers:
+            content_type = headers["Content-Type".casefold()]
+            if "charset=" in content_type:
+                return content_type.split("charset=")[1]
+        return "utf-8"
+
     def get_from_network(self):
         s = self.connect()
         packet = (
@@ -60,7 +68,15 @@ class URL:
             + "\r\n\r\n"
         )
         s.send(packet.encode("utf-8"))
-        response = s.makefile("r", encoding="utf-8", newline="\r\n")
+        # buffer = b""
+        # while True:
+        #     data = s.recv(4096)
+        #     buffer += data
+        #     if data == b"":
+        #         break
+        # print(buffer)
+        # return
+        response = s.makefile("r", encoding="utf8", newline="\r\n")
         status = response.readline()
         # 2 means split only 2 times
         # HTTP/1.1 200 OK => HTTP/1.1, 200, OK
@@ -105,7 +121,8 @@ class URL:
         elif self.schema in ["http", "https"]:
             return self.get_from_network()
 
-    def extract_text_from_html(self, html: str):
+    def extract_text_from_html(self, html: str, encoding: str):
+        html = html.encode(encoding).decode("utf-8")
         in_tag = False
         text = ""
         while html:
@@ -120,8 +137,9 @@ class URL:
 
     def show_text(self):
         response = self.get()
+        encoding = self._get_encoding(response.headers)
         body = response.body
-        print(self.extract_text_from_html(body))
+        print(self.extract_text_from_html(body, encoding))
 
 
 class TestURL:
@@ -178,8 +196,8 @@ class TestRequest:
 
 
 if __name__ == "__main__":
-    url = URL("https://browser.engineering/http.html")
+    url = URL("https://example.com/index.html")
     url.show_text()
 
-    file = URL("file://./url.py")
-    file.show_text()
+    # file = URL("file://./url.py")
+    # file.show_text()
