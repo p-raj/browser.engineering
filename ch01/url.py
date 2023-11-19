@@ -17,19 +17,29 @@ class HTTPResponse:
 
 class URL:
     def __init__(self, url: str):
-        self.schema = url.split("://")[0]
-        if self.schema not in ["http", "https", "file"]:
-            raise ValueError("Schema must be http or https or file")
-        if not url.endswith("/"):
-            url += "/"
-        self.host = url.split("://")[1].split("/")[0]
-        if ":" in self.host:
-            self.port = self.host.split(":")[1]
-            self.host = self.host.split(":")[0]
+        if url.startswith("data:"):
+            self.schema = "data"
+            self.path = url.split("data:")[1].split(",")
         else:
-            self.port = 80 if self.schema == "http" else 443
-        self.path = url.split("://")[1].split("/")[1:]
-        self.path = [p for p in self.path if p != ""]
+            self.schema = url.split("://")[0]
+
+        if self.schema not in ["http", "https", "file", "data"]:
+            raise ValueError("Schema must be http or https or file or data")
+
+        if self.schema == "data":
+            self.port = None
+            self.host = None
+        elif self.schema in ["http", "https", "file"]:
+            if not url.endswith("/"):
+                url += "/"
+            self.host = url.split("://")[1].split("/")[0]
+            if ":" in self.host:
+                self.port = self.host.split(":")[1]
+                self.host = self.host.split(":")[0]
+            else:
+                self.port = 80 if self.schema == "http" else 443
+            self.path = url.split("://")[1].split("/")[1:]
+            self.path = [p for p in self.path if p != ""]
 
     def connect(self):
         secure = True if self.schema == "https" else False
@@ -68,14 +78,6 @@ class URL:
             + "\r\n\r\n"
         )
         s.send(packet.encode("utf-8"))
-        # buffer = b""
-        # while True:
-        #     data = s.recv(4096)
-        #     buffer += data
-        #     if data == b"":
-        #         break
-        # print(buffer)
-        # return
         response = s.makefile("r", encoding="utf8", newline="\r\n")
         status = response.readline()
         # 2 means split only 2 times
@@ -115,8 +117,18 @@ class URL:
             body=body,
         )
 
+    def get_from_data(self):
+        return HTTPResponse(
+            status_code=200,
+            status_text="OK",
+            headers={},
+            body=self.path[1],
+        )
+
     def get(self):
-        if self.schema == "file":
+        if self.schema == "data":
+            return self.get_from_data()
+        elif self.schema == "file":
             return self.get_from_file()
         elif self.schema in ["http", "https"]:
             return self.get_from_network()
@@ -196,8 +208,11 @@ class TestRequest:
 
 
 if __name__ == "__main__":
-    url = URL("https://example.com/index.html")
-    url.show_text()
+    # url = URL("https://example.com/index.html")
+    # url.show_text()
 
     # file = URL("file://./url.py")
     # file.show_text()
+
+    data = URL("data:text/html,<h1>Example Domain</h1>")
+    data.show_text()
