@@ -133,8 +133,7 @@ class URL:
         elif self.schema in ["http", "https"]:
             return self.get_from_network()
 
-    def extract_text_from_html(self, html: str, encoding: str):
-        html = html.encode(encoding).decode("utf-8")
+    def extract_text_from_html(self, html: str):
         in_tag = False
         text = ""
         while html:
@@ -151,7 +150,8 @@ class URL:
         response = self.get()
         encoding = self._get_encoding(response.headers)
         body = response.body
-        print(self.extract_text_from_html(body, encoding))
+        html = body.encode(encoding).decode("utf-8")
+        print(self.extract_text_from_html(html))
 
 
 class TestURL:
