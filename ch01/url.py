@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+import stat
 import pytest
 import socket
 import ssl
+import os
 
 
 @dataclass
@@ -15,8 +17,8 @@ class HTTPResponse:
 class URL:
     def __init__(self, url: str):
         self.schema = url.split("://")[0]
-        if self.schema not in ["http", "https"]:
-            raise ValueError("Schema must be http or https")
+        if self.schema not in ["http", "https", "file"]:
+            raise ValueError("Schema must be http or https or file")
         if not url.endswith("/"):
             url += "/"
         self.host = url.split("://")[1].split("/")[0]
@@ -28,7 +30,8 @@ class URL:
         self.path = url.split("://")[1].split("/")[1:]
         self.path = [p for p in self.path if p != ""]
 
-    def connect(self, secure=False):
+    def connect(self):
+        secure = True if self.schema == "https" else False
         s = socket.socket(
             family=socket.AF_INET,
             type=socket.SOCK_STREAM,
@@ -47,8 +50,8 @@ class URL:
             "User-Agent": "Python HTTP Client",
         }
 
-    def get(self):
-        s = self.connect(secure=True if self.schema == "https" else False)
+    def get_from_network(self):
+        s = self.connect()
         packet = (
             f"GET /{'/'.join(self.path)} HTTP/1.1\r\n"
             + "\r\n".join(
@@ -78,6 +81,29 @@ class URL:
             headers=response_headers,
             body=body,
         )
+
+    def get_from_file(self):
+        path = "/".join(self.path)
+        if not os.path.exists(path):
+            raise FileNotFoundError("No such file or directory: " + path)
+        if os.path.isdir(path):
+            raise IsADirectoryError("Is a directory: " + path)
+        if not os.access(path, os.R_OK):
+            raise PermissionError("Permission denied: " + path)
+        with open(path, "r") as f:
+            body = f.read()
+        return HTTPResponse(
+            status_code=200,
+            status_text="OK",
+            headers={},
+            body=body,
+        )
+
+    def get(self):
+        if self.schema == "file":
+            return self.get_from_file()
+        elif self.schema in ["http", "https"]:
+            return self.get_from_network()
 
     def extract_text_from_html(self, html: str):
         in_tag = False
@@ -154,3 +180,6 @@ class TestRequest:
 if __name__ == "__main__":
     url = URL("https://browser.engineering/http.html")
     url.show_text()
+
+    file = URL("file://./url.py")
+    file.show_text()
