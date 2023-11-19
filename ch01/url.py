@@ -40,16 +40,22 @@ class URL:
         s.connect((self.host, self.port))
         return s
 
+    def default_request_headers(self):
+        return {
+            "Host": self.host,
+            "Connection": "close",
+        }
+
     def get(self):
         s = self.connect(secure=True if self.schema == "https" else False)
-        s.send(
-            (
-                f"GET /{'/'.join(self.path)} HTTP/1.1\r\n"
-                f"Host: {self.host}\r\n"
-                "Connection: close\r\n"
-                "\r\n"
-            ).encode("utf-8")
+        packet = (
+            f"GET /{'/'.join(self.path)} HTTP/1.1\r\n"
+            + "\r\n".join(
+                [f"{k}: {v}" for k, v in self.default_request_headers().items()]
+            )
+            + "\r\n\r\n"
         )
+        s.send(packet.encode("utf-8"))
         response = s.makefile("r", encoding="utf-8", newline="\r\n")
         status = response.readline()
         # 2 means split only 2 times
