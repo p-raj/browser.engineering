@@ -44,6 +44,7 @@ class URL:
         return {
             "Host": self.host,
             "Connection": "close",
+            "User-Agent": "Python HTTP Client",
         }
 
     def get(self):
