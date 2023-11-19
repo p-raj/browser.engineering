@@ -112,7 +112,7 @@ class URL:
             status_code=200,
             status_text="OK",
             headers={},
-            body=body,
+            body=body.encode("utf-8"),
         )
 
     def get_from_data(self):
@@ -120,7 +120,7 @@ class URL:
             status_code=200,
             status_text="OK",
             headers={},
-            body=self.path[1],
+            body=(self.path[1]).encode("utf-8"),
         )
 
     def get(self):
@@ -209,8 +209,8 @@ if __name__ == "__main__":
     url = URL("https://example.com/index.html")
     url.show_text()
 
-    # file = URL("file://./url.py")
-    # file.show_text()
+    file = URL("file://./url.py")
+    file.show_text()
 
-    # data = URL("data:text/html,<h1>Example Domain</h1>")
-    # data.show_text()
+    data = URL("data:text/html,<h1>Example Domain</h1>")
+    data.show_text()
