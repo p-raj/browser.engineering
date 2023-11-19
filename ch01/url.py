@@ -138,9 +138,9 @@ class URL:
         in_tag = False
         text = ""
         while html:
-            if html.startswith("<"):
+            if html.startswith("<") or html.startswith("&lt;"):
                 in_tag = True
-            elif html.startswith(">"):
+            elif html.startswith(">") or html.startswith("&gt;"):
                 in_tag = False
             elif not in_tag:
                 text += html[0]
