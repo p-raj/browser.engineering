@@ -1,6 +1,4 @@
 from dataclasses import dataclass
-import re
-import stat
 import pytest
 import socket
 import ssl
@@ -12,7 +10,7 @@ class HTTPResponse:
     status_code: int
     status_text: str
     headers: dict
-    body: str
+    body: bytes
 
 
 class URL:
@@ -78,15 +76,15 @@ class URL:
             + "\r\n\r\n"
         )
         s.send(packet.encode("utf-8"))
-        response = s.makefile("r", encoding="utf8", newline="\r\n")
-        status = response.readline()
+        response = s.makefile("rb", newline="\r\n")
+        status = response.readline().decode("utf-8")
         # 2 means split only 2 times
         # HTTP/1.1 200 OK => HTTP/1.1, 200, OK
         _, status_code, status_text = status.split(" ", 2)
         status_text = status_text.rstrip("\r\n")
         response_headers = {}
         while True:
-            line = response.readline()
+            line = response.readline().decode("utf-8")
             if line == "\r\n":
                 break
             header, value = line.split(":", 1)
@@ -150,7 +148,7 @@ class URL:
         response = self.get()
         encoding = self._get_encoding(response.headers)
         body = response.body
-        html = body.encode(encoding).decode("utf-8")
+        html = body.decode(encoding)
         print(self.extract_text_from_html(html))
 
 
@@ -208,11 +206,11 @@ class TestRequest:
 
 
 if __name__ == "__main__":
-    # url = URL("https://example.com/index.html")
-    # url.show_text()
+    url = URL("https://example.com/index.html")
+    url.show_text()
 
     # file = URL("file://./url.py")
     # file.show_text()
 
-    data = URL("data:text/html,<h1>Example Domain</h1>")
-    data.show_text()
+    # data = URL("data:text/html,<h1>Example Domain</h1>")
+    # data.show_text()
